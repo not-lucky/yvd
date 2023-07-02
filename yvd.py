@@ -1,4 +1,4 @@
-import traceback
+# import traceback
 import json
 import yt_dlp
 import PySimpleGUI as sg
@@ -211,7 +211,7 @@ def video_screen(json_data: dict):
                     default=True)
     ]]
     cbox_thumbnail_column = [[
-        sg.Checkbox("Download Thumbnail", key='thumb', default=True)
+        sg.Checkbox("Download Thumbnail", key='thumb', default=False)
     ]]
     cbox_comment_column = [[
         sg.Checkbox("Download Comments", key='comm', default=False)
@@ -375,7 +375,7 @@ def playlist_screen(json_data: dict):
     ]]
 
     cbox_thumbnail_column = [[
-        sg.Checkbox("Download Thumbnail", key='thumb', default=True)
+        sg.Checkbox("Download Thumbnail", key='thumb', default=False)
     ]]
     cbox_comment_column = [[
         sg.Checkbox("Download Comments", key='comm', default=False)
