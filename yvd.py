@@ -1,18 +1,11 @@
-# import traceback
 import json
 import yt_dlp
 import PySimpleGUI as sg
-# import re
-# import urllib
-# import base64
-from PIL import Image
-import requests
 import os
 import datetime
 
 WINDOW_TITLE = "YouTube Video Downloader"
 THEME = 'Dark Blue 14'
-THUMBNAIL_FILENAME = 'thumbnail.jpg'
 THUMBNAIL_SIZE = (300, 300)
 ERROR_MESSAGE = """An error occurred while attempting to download the video. Please check the following:
 
@@ -48,7 +41,6 @@ def create_center_column(column: sg.Column) -> list[list]:
 
 def validate_youtube_url(url: str) -> tuple:
     print('validate')
-
     try:
         ydl_opts = {'quiet': True, 'extract_flat': True}
         print(ydl_opts)
@@ -57,7 +49,6 @@ def validate_youtube_url(url: str) -> tuple:
             info = ydl.extract_info(url, download=False)
             print('extract intfo')
 
-            # ydl.sanitize_info makes the info json-serializable
             info = ydl.sanitize_info(info)
             print('santitize')
         print('returned no error')
@@ -69,45 +60,9 @@ def validate_youtube_url(url: str) -> tuple:
                 json.dump(info, fl, indent=2)
             return (True, ERROR_MESSAGE)
 
-    # except yt_dlp.utils.ExtractorError as ex:
-    #     # message = ''.join(traceback.format_exception(type(ex), ex, ex.__traceback__))
-    #     message = 'uwuwuasdfo'
-    #     print('returned error')
-    #     print(message)
-    #     return (True, message)
-
     except yt_dlp.utils.DownloadError as ex:
-        # message = ''.join(traceback.format_exception(type(ex), ex, ex.__traceback__))
         print(ex)
         return (True, ERROR_MESSAGE)
-
-
-def download_thumbnail_image(url: str):
-
-    response = requests.get(url)
-    with open(THUMBNAIL_FILENAME, 'wb') as handle:
-        handle.write(response.content)
-
-    filename = THUMBNAIL_FILENAME
-
-    image = Image.open(filename)
-    image.thumbnail(THUMBNAIL_SIZE, Image.Resampling.LANCZOS)
-    new = ".".join(filename.split('.')[:-1]) + ".png"
-    image.save(new)
-    return new
-
-
-a = [
-    r"\x1b[0;30m", r"\x1b[0;31m", r"\x1b[0;32m", r"\x1b[0;33m", r"\x1b[0;34m",
-    r"\x1b[0;35m", r"\x1b[0;36m", r"\x1b[0;37m", r"\u001b", r"\u001b"
-]
-
-
-def escape_ansi(line):
-    for i in a:
-        line = line.replace(i, '')
-
-    return line
 
 
 def initial_screen() -> sg.Window:
@@ -136,10 +91,6 @@ def video_screen(json_data: dict):
             r'C:/Users/lucky/downloads/Screenshot 2023-06-04 at 13-16-39 Screenshot.png'
         )
     ]]
-    thumbnail = download_thumbnail_image(json_data['thumbnail'])
-    # thumbnail_image = ''
-    thumbnail_column = [[sg.Image(thumbnail)]]
-    print('readchce')
 
     video_info = f"Uploader: {json_data['uploader']}\n"
     video_info += f"Title: {json_data['fulltitle']}\n"
@@ -152,8 +103,6 @@ def video_screen(json_data: dict):
 
     print('bbbbb')
     field_layout = [[
-        sg.Column(thumbnail_column, expand_x=True),
-        # sg.VSeperator(),
         sg.Column(info_column,
                   size=THUMBNAIL_SIZE,
                   scrollable=True,
@@ -195,15 +144,8 @@ def video_screen(json_data: dict):
         sg.Text('Video quality'),
     ]]
 
-    # audio_opts = [11, 22, 33, 44, 55]
-    # audio_column = [[
-    #     sg.Combo(audio_opts, key='audio', size=(50, 99)),
-    #     sg.Text('Audio quality'),
-    # ]]
-
     download_info_column = [
         sg.Column(video_column),
-        # sg.Column(audio_column)
     ]
     cbox_subtitle_column = [[
         sg.Checkbox("Download Subtitle (english only)",
@@ -227,13 +169,11 @@ def video_screen(json_data: dict):
 
     layout = [
         *create_center_column(image_column),
-        # [sg.HorizontalSeparator()],
         [
             sg.Column(
                 [[sg.Frame('Video Information', field_layout, expand_x=True)]],
                 expand_x=True),
         ],
-        # [sg.HorizontalSeparator()],
         [
             sg.Column([[
                 sg.Frame('Quality Selection',
@@ -267,14 +207,12 @@ def video_screen(json_data: dict):
         ],
     ]
     layout = [[sg.Column(layout, scrollable=True, size=(1030, 950))]]
-    window = sg.Window(
-        WINDOW_TITLE,
-        layout,
-        #    size=(900,900),
-        resizable=True,
-        finalize=True,
-        auto_size_text=True,
-        scaling=1.5)
+    window = sg.Window(WINDOW_TITLE,
+                       layout,
+                       resizable=True,
+                       finalize=True,
+                       auto_size_text=True,
+                       scaling=1.5)
     return {
         'window': window,
         'video_opts': video_opts,
@@ -294,28 +232,6 @@ def playlist_screen(json_data: dict):
     for i, entry in enumerate(json_data['entries']):
         videos.append(f"{i+1}: {entry['title']}")
 
-    # videos = []
-    # qualities = []
-    # qualities_formatted_string = []
-    # quality = {}
-
-    # for entries in json_data['entries']:
-    #     videos.append(f"{entries['playlist_index']} - {entries['title']}")
-    #     for formats in entries['formats']:
-    #         if formats['acodec'] == 'none' and formats['vcodec'] != 'none':
-    #             if formats['height'] not in qualities:
-    #                 formatted_string = str(formats['height']) + 'p'
-    #                 quality[formats['height']] = formatted_string
-    #                 qualities.append(formats['height'])
-
-    # quality_list = sorted(quality.items(), key=lambda x: x[0])
-    # # sorted(quality.values(), key=lambda x: int(x.split('p')[0]))
-
-    # qualities = []
-    # for tup in quality_list:
-    #     qualities.append(tup[0])
-    # qualities_formatted_string.append(tup[1])
-
     qualities_formatted_string = [
         '144p', '240p', '360p', '480p', '720p', '1080p', '1440p', '2160p'
     ]
@@ -324,14 +240,9 @@ def playlist_screen(json_data: dict):
 
     info_column = [[sg.Text(video)] for video in videos]
 
-    print('bbbbb')
     field_layout = [[
-        sg.Column(
-            info_column,
-            #   size=THUMBNAIL_SIZE,
-            size=(900, 200),
-            scrollable=True,
-            expand_x=True),
+        sg.Column(info_column, size=(900, 200), scrollable=True,
+                  expand_x=True),
     ]]
 
     playlist_column = sg.Column(
@@ -356,7 +267,6 @@ def playlist_screen(json_data: dict):
 
     download_info_column = [
         sg.Column(video_column),
-        # sg.Column(audio_column)
     ]
     cbox_subtitle_column = [[
         sg.Checkbox("Download Subtitle (english only)",
@@ -397,9 +307,7 @@ def playlist_screen(json_data: dict):
 
     layout = [
         *create_center_column(image_column),
-        # [sg.HorizontalSeparator()],
         [playlist_column],
-        # [sg.HorizontalSeparator()],
         [
             sg.Column([[
                 sg.Frame('Quality Selection',
@@ -447,13 +355,11 @@ def playlist_screen(json_data: dict):
                 scrollable=True,
             )]])
     ]
-    window = sg.Window(
-        WINDOW_TITLE,
-        layout,
-        #    size=(800,900),
-        resizable=True,
-        auto_size_text=True,
-        scaling=1.5)
+    window = sg.Window(WINDOW_TITLE,
+                       layout,
+                       resizable=True,
+                       auto_size_text=True,
+                       scaling=1.5)
     return {'window': window}
 
 
@@ -501,7 +407,6 @@ def download_video(data: dict, values: dict, json_data: dict, url: str):
             print(output_)
             sg.cprint(output_, colors='black')
             window.refresh()
-            # i += 1
 
         elif progress['status'] == 'finished':
             output_ = f"\n\nDownload Complete: {progress.get('filename', '')}\n\n"
@@ -548,42 +453,23 @@ def download_video(data: dict, values: dict, json_data: dict, url: str):
         ydl.download([url])
         print('download actually complete')
 
-        # ydl.sanitize_info makes the info json-serializable
-        # info = ydl.sanitize_info(info)
-
 
 def download_playlist(data: dict, values: dict, json_data: dict, url: str):
-
     window = data['window']
     i = 0
 
-    # j = 0
-
     def progress_hook(progress):
         nonlocal i
-        # nonlocal j
         if i == 0:
             output_ = f"Now Downloading: {progress.get('filename', '')}\n\n"
             sg.cprint(output_, colors='black')
             i = 1
 
-        # if j < 3:
-        #     with open('hellow.json', 'a+', encoding='utf-8') as fl:
-        #         # a = json.load(fl)
-        #         # a.append(progress)
-        #         json.dump(progress, fl, indent=2)
-
         if progress['status'] == 'downloading':
-            # percent = progress['_percent_str']
-            # speed = progress['_speed_str']
-            # eta = progress['_eta_str']
-            # output_ = f"Downloading: {percent} at {speed}, ETA: {eta}"
-            # print(output_)
+
             output_ = progress['_default_template']
             sg.cprint(output_, colors='black')
             window.refresh()
-            # j += 1
-            # i += 1
 
         elif progress['status'] == 'finished':
             output_ = f"\n\nDownload Complete: {progress.get('filename', '')}\n\n"
@@ -599,8 +485,6 @@ def download_playlist(data: dict, values: dict, json_data: dict, url: str):
         form = "bestaudio"
     else:
         form = f"bv*[height<={height}]+ba/b"
-
-    # form = f"bv*[height<={height}]+ba/b"
 
     outtmpl = folderr(values['folder_path'], True, values['folder'],
                       values['number'])
@@ -634,9 +518,6 @@ def download_playlist(data: dict, values: dict, json_data: dict, url: str):
         ydl.download([url])
         print('download actually complete')
 
-        # ydl.sanitize_info makes the info json-serializable
-        # info = ydl.sanitize_info(info)
-
 
 def popup_continue_or_not():
 
@@ -654,47 +535,29 @@ def main():
     data = {}
     url = ''
     json_data = {}
-    # with open('data.json', encoding='utf-8') as fl:
-    #     json_data = json.load(fl)
 
-    # curr_window = 'init'
     window = initial_screen()
     window.BringToFront()
-    # sg.cprint_set_output_destination(window, multiline_key)
 
-    # window.close()
-
-    # data = playlist_screen(json_data)
-    # window = data['window']
-    # print(window.read())
-    # print(data)
-
-    # exit()
-    # i = 1
     while True:
-        # print(i)
         event, values = window.Read()
         print(event, values)
 
         if event == 'proceed':
 
-            # to inform user that video is processing, as window may look like it stopped responding
             window.Element('processing').update(
                 'The video/playlist is processing.\n\n\nPLEASE DO NOT CLOSE THE WINDOW!!!\n\n\nIf there\'s an error, a popup will automatically appear.',
-                # text_color='DarkOrchid2'
             )
             window.refresh()
 
             url = values['url'].strip()
-            # window.perform_long_operation(
-            #     lambda: my_long_func(int(values['-IN-']), a=10), '-END KEY-')
 
             url = url.split('&index')[0]
             temp = url.split('=')
             url = temp[0] if len(temp) == 1 else temp[1]
             url = url.split('&')[0]
 
-            if len(url) > 11:
+            if len(url) > 11 and 'channel' not in url:
                 url = "https://www.youtube.com/playlist?list=" + url
             print(url)
 
@@ -703,46 +566,35 @@ def main():
 
             if error:
 
-                # to remove the processing message
                 window.Element('processing').update('')
                 print(values)
                 window.refresh()
 
                 error_message = f'ERROR!!!\n\nURL: {url}' + '\n\n\n\n' + json_data
 
-                sg.Popup(escape_ansi(error_message), keep_on_top=True)
+                sg.Popup(error_message, keep_on_top=True)
 
             # if no error getting data
             else:
 
                 if json_data['_type'] == 'playlist':
-                    # curr_window = 'playlist'
                     data = playlist_screen(json_data)
                     print(data)
 
                     window.close()
                     window = data['window']
 
-                    # pass
                 else:
-                    # curr_window = 'video'
                     data = video_screen(json_data)
                     window.close()
                     window = data['window']
-                    # pass
-
-                # window.close()
-
-                # print("good url")
 
         elif event == "download":
             print(data, values, url, sep='\n\n')
-            # download_video(data, values, json_data, url)
             sg.cprint("DOWNLOAD STARTING!!!")
             window.refresh()
 
             download_video(data, values, json_data, url)
-            # sg.Popup("DOWNLOAD COMPLETED!!!", keep_on_top=True)
 
             window_pop = popup_continue_or_not()
             event_pop, _ = window_pop.read()
@@ -763,14 +615,12 @@ def main():
             sg.cprint("DOWNLOAD STARTING!!!")
             window.refresh()
 
-            # sg.Popup("DOWNLOAD COMPLETED!!!", keep_on_top=True)
-
             window_pop = popup_continue_or_not()
             event_pop, _ = window_pop.read()
 
             if event_pop == "popup_cont" or event_pop == sg.WIN_CLOSED:
                 window_pop.close()
-                # continue
+
             elif event_pop == 'popup_no_cont':
                 window_pop.close()
                 window.close()
