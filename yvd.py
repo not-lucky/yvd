@@ -7,6 +7,7 @@ import datetime
 WINDOW_TITLE = "YouTube Video Downloader"
 THEME = 'Dark Blue 14'
 THUMBNAIL_SIZE = (300, 300)
+
 ERROR_MESSAGE = """An error occurred while attempting to download the video. Please check the following:
 
 
@@ -24,12 +25,17 @@ Discord: 	not.lucky_
 """
 
 
+# converts the raw YouTube video upload date string in
+# %Y%m%d format (e.g. 20200101)
+# to a more readable format like
+# January 01, 2020
 def upload_date(date):
     date_obj = datetime.datetime.strptime(date, "%Y%m%d")
     formatted_date = date_obj.strftime("%B %d, %Y")
     return formatted_date
 
 
+# used to center an element
 def create_center_column(column: sg.Column) -> list[list]:
     return [[sg.VPush()],
             [
@@ -39,15 +45,13 @@ def create_center_column(column: sg.Column) -> list[list]:
             ], [sg.VPush()]]
 
 
+# to get info_json and validate
+# return False and dict if valid, else True and error message
 def validate_youtube_url(url: str) -> tuple:
-    print('validate')
     try:
         ydl_opts = {'quiet': True, 'extract_flat': True}
-        print(ydl_opts)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            print('as')
             info = ydl.extract_info(url, download=False)
-            print('extract intfo')
 
             info = ydl.sanitize_info(info)
             print('santitize')
@@ -65,17 +69,13 @@ def validate_youtube_url(url: str) -> tuple:
         return (True, ERROR_MESSAGE)
 
 
+# for initial screen
 def initial_screen() -> sg.Window:
-    image_column = [[
-        sg.Image(
-            filename=
-            r'C:/Users/lucky/downloads/Screenshot 2023-06-04 at 13-16-39 Screenshot.png'
-        )
-    ]]
+    image_column = [[sg.Image(filename=r'logo.png')]]
     layout = [
         *create_center_column(image_column),
         [
-            sg.Text('YouTube video/playlist link: '),
+            sg.Text('YouTube video/playlist/channel link: '),
             sg.Input(key='url', expand_x=True, focus=True)
         ], *create_center_column([[
             sg.Button(button_text="Proceed", key="proceed"),
@@ -84,13 +84,9 @@ def initial_screen() -> sg.Window:
     return sg.Window(WINDOW_TITLE, layout, resizable=True, finalize=True)
 
 
+# for video
 def video_screen(json_data: dict):
-    image_column = [[
-        sg.Image(
-            filename=
-            r'C:/Users/lucky/downloads/Screenshot 2023-06-04 at 13-16-39 Screenshot.png'
-        )
-    ]]
+    image_column = [[sg.Image(filename=r'logo.png')]]
 
     video_info = f"Uploader: {json_data['uploader']}\n"
     video_info += f"Title: {json_data['fulltitle']}\n"
@@ -98,19 +94,17 @@ def video_screen(json_data: dict):
     video_info += f"Views: {json_data['view_count']:,}\n"
     video_info += f"Upload Date: {upload_date(json_data['upload_date'])}\n"
 
-    pass
     info_column = [[sg.Text(video_info)]]
 
-    print('bbbbb')
-    field_layout = [[
-        sg.Column(info_column,
-                  size=THUMBNAIL_SIZE,
-                  scrollable=True,
+    video_info_layout = [[
+        sg.Column(info_column, size=(300, 100), scrollable=True,
                   expand_x=True),
     ]]
 
-    video_opts = []
-    video_opts_ids = []
+    # video_options_display for displaying (contains custom string)
+    # video_format_ids for format ids
+    video_options_display = []
+    video_format_ids = []
     index = 1
 
     audio_size_bytes = 0
@@ -128,18 +122,18 @@ def video_screen(json_data: dict):
             else:
                 filesize = yt_dlp.utils.format_bytes(
                     formats['filesize_approx'] + audio_size_bytes)
-            video_opts_ids.append(formats['format_id'])
-            video_opts.append(
+            video_format_ids.append(formats['format_id'])
+            video_options_display.append(
                 f"{index} - Resolution: {formats['resolution']}, FileSize: {filesize}, fps: {formats['fps']}, vcodec: {formats['vcodec']}"
             )
             index += 1
-    video_opts[-1] += "                      (RECOMMENDED)"
+    video_options_display[-1] += "                      (RECOMMENDED)"
 
     video_column = [[
-        sg.Combo(video_opts,
+        sg.Combo(video_options_display,
                  key='video',
                  auto_size_text=True,
-                 default_value=video_opts[-1],
+                 default_value=video_options_display[-1],
                  readonly=True),
         sg.Text('Video quality'),
     ]]
@@ -147,6 +141,7 @@ def video_screen(json_data: dict):
     download_info_column = [
         sg.Column(video_column),
     ]
+
     cbox_subtitle_column = [[
         sg.Checkbox("Download Subtitle (english only)",
                     key='sub',
@@ -165,14 +160,16 @@ def video_screen(json_data: dict):
         cbox_subtitle_column, cbox_thumbnail_column, cbox_comment_column,
         cbox_audio_column
     ]
+
     options = [sg.Column(col) for col in checkbox_columns]
 
     layout = [
         *create_center_column(image_column),
         [
-            sg.Column(
-                [[sg.Frame('Video Information', field_layout, expand_x=True)]],
-                expand_x=True),
+            sg.Column([[
+                sg.Frame('Video Information', video_info_layout, expand_x=True)
+            ]],
+                      expand_x=True),
         ],
         [
             sg.Column([[
@@ -215,18 +212,14 @@ def video_screen(json_data: dict):
                        scaling=1.5)
     return {
         'window': window,
-        'video_opts': video_opts,
-        'video_opts_ids': video_opts_ids
+        'video_options_display': video_options_display,
+        'video_format_ids': video_format_ids
     }
 
 
+#for playlist
 def playlist_screen(json_data: dict):
-    image_column = [[
-        sg.Image(
-            filename=
-            r'C:/Users/lucky/downloads/Screenshot 2023-06-04 at 13-16-39 Screenshot.png'
-        )
-    ]]
+    image_column = [[sg.Image(filename=r'logo.png')]]
 
     videos = []
     for i, entry in enumerate(json_data['entries']):
@@ -363,6 +356,8 @@ def playlist_screen(json_data: dict):
     return {'window': window}
 
 
+# to create folder if doeasnt exist and to create filename
+# return filename template
 def folderr(folder_path: str,
             playlist: bool = False,
             put_in_folder: bool = False,
@@ -389,7 +384,6 @@ def folderr(folder_path: str,
 
 def download_video(data: dict, values: dict, json_data: dict, url: str):
     window = data['window']
-
     i = 0
 
     def progress_hook(progress):
@@ -414,7 +408,7 @@ def download_video(data: dict, values: dict, json_data: dict, url: str):
             print("Download completed!")
             i = 0
 
-    format_id = data['video_opts_ids'][data['video_opts'].index(
+    format_id = data['video_format_ids'][data['video_options_display'].index(
         values['video'])]
 
     form = f"{format_id}+bestaudio/b"
@@ -552,20 +546,19 @@ def main():
 
             url = values['url'].strip()
 
-            url = url.split('&index')[0]
-            temp = url.split('=')
-            url = temp[0] if len(temp) == 1 else temp[1]
-            url = url.split('&')[0]
+            # url = url.split('&index')[0]
+            # temp = url.split('=')
+            # url = temp[0] if len(temp) == 1 else temp[1]
+            # url = url.split('&')[0]
 
-            if len(url) > 11 and 'channel' not in url:
-                url = "https://www.youtube.com/playlist?list=" + url
-            print(url)
+            # if len(url) > 11 and 'channel' not in url and '@' not in url:
+            #     url = "https://www.youtube.com/playlist?list=" + url
+            # print(url)
 
             error, json_data = validate_youtube_url(url)
             print(json_data)
 
             if error:
-
                 window.Element('processing').update('')
                 print(values)
                 window.refresh()
@@ -576,15 +569,15 @@ def main():
 
             # if no error getting data
             else:
-
-                if json_data['_type'] == 'playlist':
+                #if playlist
+                if json_data['extractor_key'] == 'YoutubeTab':
                     data = playlist_screen(json_data)
                     print(data)
 
                     window.close()
                     window = data['window']
 
-                else:
+                elif json_data['extractor_key'] == 'Youtube':
                     data = video_screen(json_data)
                     window.close()
                     window = data['window']
